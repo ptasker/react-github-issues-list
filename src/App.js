@@ -1,9 +1,7 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
-import Header from './Header';
-import Weather from './Weather';
-import WeatherInfo from './WeatherInfo';
+import Issues from './Issues';
+import IssueInfo from './IssueInfo';
 
 
 class App extends React.Component {
@@ -11,19 +9,43 @@ class App extends React.Component {
   constructor() {
     super();
     this.state = {
-      data: []
+      data: [],
     };
 
-    this.loadWeather = this.loadWeather.bind(this);
+    this.loadIssues = this.loadIssues.bind(this);
   };
 
-  loadWeather() {
-    return fetch('https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22ottawa%2C%20on%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys')
-      .then((response) => response.json())
+  loadIssues(initialState) {
+    this.setState({
+      api_message: null,
+      input: initialState,
+      data: [],
+      titleVisible: false
+    });
+
+    const endpoint = `https://api.github.com/repos/${initialState}/issues`;
+
+    return fetch(endpoint)
+      .then((response) => {
+        this.setState({ titleVisible: false });
+        //Handle 400s and 500s
+        if (response.status !== 200) {
+          this.setState({ api_message: 'Invalid org/repo yo.' });
+          throw new Error('Network response was not ok.');
+        }
+        return response.json();
+      })
       .then((responseJson) => {
-        // let json = responseJson.results.forecast;
-        let json = responseJson.query.results.channel.item.forecast;
-        this.setState({ data: json });
+        if (!responseJson.length) {
+          this.setState({ api_message: `No issues for ${initialState}` });
+          return;
+        }
+        this.setState({ titleVisible: true });
+        let json = responseJson;
+        this.setState({
+          data: json,
+          api_message: null
+        });
       })
       .catch((error) => {
         console.error(error);
@@ -34,20 +56,19 @@ class App extends React.Component {
     return (
       <div className="App">
         <div className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <h2>Welcome to React</h2>
+          <img src="https://upload.wikimedia.org/wikipedia/en/a/a7/React-icon.svg" className="App-logo" alt="logo" />
+          <h2>Welcome to the React Github Widget</h2>
         </div>
-        <Header title="What's up y'all?" />
-        <p className="App-intro">
-
-        </p>
-        <div className="weather-box">
+        <div className="App-intro">
+          <h3 className="message error">{this.state.api_message}</h3>
+        </div>
+        <Issues loadIssues={this.loadIssues} repoName={this.state.input} titleVisible={this.state.titleVisible} />
+        <div className="issues-box">
           {
-            Object.keys( this.state.data ).map( key =>
-								<WeatherInfo key={key} index={key} details={this.state.data[ key ]} /> )
+            Object.keys(this.state.data).map(key =>
+              <IssueInfo key={key} index={key} details={this.state.data[key]} />)
           }
         </div>
-        <Weather loadWeather={this.loadWeather} state={this.state} />
       </div>
     );
   }
