@@ -3,7 +3,6 @@ import './App.css';
 import Issues from './Issues';
 import IssueInfo from './IssueInfo';
 
-
 class App extends React.Component {
 
   constructor() {
